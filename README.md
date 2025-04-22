@@ -1,11 +1,3 @@
-# dpi-health
-DietPi Deluxe Terminal Health Check
-Great! Here’s a polished README.md file you can drop straight into your GitHub repository:
-
-⸻
-
-📄 README.md
-
 # 🩺 DietPi Deluxe Terminal Health Check
 
 A full-featured, menu-driven system health checker for DietPi-based systems.  
@@ -72,13 +64,13 @@ chmod +x health-check.sh
 
 Most functionality works out-of-the-box, but some commands are optional:
 
-Tool	Required for
-iftop	Network RX/TX stats
+Tool			Required for
+iftop			Network RX/TX stats
 iostat (sysstat)	I/O performance analysis
-speedtest-cli	Network speed test
-dig	Unbound DNS check
-docker	Docker container overview
-vcgencmd	Undervoltage detection (Raspberry Pi)
+speedtest-cli		Network speed test
+dig			Unbound DNS check
+docker			Docker container overview
+vcgencmd		Undervoltage detection (Raspberry Pi)
 
 The script will ask for permission before installing any missing packages.
 
