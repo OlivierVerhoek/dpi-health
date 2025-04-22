@@ -15,7 +15,7 @@ Lightweight, fast, and entirely terminal-based.
 ✅ Easy-to-read ASCII-styled banners  
 ✅ Lightweight, bash-only — no bloat
 
-⸻
+---
 
 ## 📸 Menu Preview
 
@@ -48,7 +48,7 @@ Lightweight, fast, and entirely terminal-based.
 	100.	Show Final Summary Report
 	101.	Exit
 
-⸻
+---
 
 ## 📦 Installation
 
@@ -58,19 +58,21 @@ cd dietpi-health-check
 chmod +x health-check.sh
 ./health-check.sh
 
+
+
 ⸻
 
 🔧 Requirements
 
 Most functionality works out-of-the-box, but some commands are optional:
 
-Tool			Required for
-iftop			Network RX/TX stats
+Tool	Required for
+iftop	Network RX/TX stats
 iostat (sysstat)	I/O performance analysis
-speedtest-cli		Network speed test
-dig			Unbound DNS check
-docker			Docker container overview
-vcgencmd		Undervoltage detection (Raspberry Pi)
+speedtest-cli	Network speed test
+dig	Unbound DNS check
+docker	Docker container overview
+vcgencmd	Undervoltage detection (Raspberry Pi)
 
 The script will ask for permission before installing any missing packages.
 
@@ -85,6 +87,8 @@ After a full scan, you’ll get a smart overview like:
 • 1 failed service (systemd-networkd-wait-online)
 • High number of open ports — consider firewall
 • Missing sudo users — consider adding your main user
+
+
 
 ⸻
 
@@ -106,4 +110,4 @@ Tested on Raspberry Pi 4 running DietPi
 
 MIT License — do what you want, just credit.
 
-⸻
+---
