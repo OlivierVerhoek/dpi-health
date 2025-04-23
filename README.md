@@ -15,7 +15,6 @@ Lightweight, fast, and entirely terminal-based.
 ✅ Easy-to-read ASCII-styled banners  
 ✅ Lightweight, Bash-only — no bloat  
 
-⸻
 
 ## 📸 Menu Preview
 
@@ -49,16 +48,12 @@ Lightweight, fast, and entirely terminal-based.
 100.  Show Final Summary Report
 101.  Exit
 
-⸻
-
 ## 📦 Installation
 
 git clone https://github.com/YOURUSERNAME/dietpi-health-check.git  
 cd dietpi-health-check  
 chmod +x health-check.sh  
 ./health-check.sh  
-
-⸻
 
 ## 🔧 Requirements
 
@@ -74,8 +69,6 @@ vcgencmd	Undervoltage detection (RPi only)
 
 The script will ask for permission before installing any missing packages.
 
-⸻
-
 ## 📈 Final Summary Report Example
 
 After a full scan, you’ll get a smart overview like:  
@@ -86,21 +79,15 @@ After a full scan, you’ll get a smart overview like:
 • High number of open ports — consider a firewall  
 • Missing sudo users — consider adding your main user  
 
-⸻
-
 ## 🤝 Contributing
 
 Suggestions, PRs, and issue reports welcome!  
 We’re aiming for a clean, readable, and portable Bash-only design.  
 
-⸻
-
 ## 🧠 Author
 
 Created by Olivier Verhoek  
 Tested on Raspberry Pi 4 running DietPi  
-
-⸻
 
 ## 📜 License
 
