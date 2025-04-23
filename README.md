@@ -1,25 +1,25 @@
-🩺 DietPi Deluxe Terminal Health Check
+# 🩺 DietPi Deluxe Terminal Health Check
 
-A full-featured, menu-driven system health checker for DietPi-based systems.
-Lightweight, fast, and entirely terminal-based.
-
-⸻
-
-🚀 Features
-
-✅ Categorized health checks with clear output
-✅ Live command output and spinner for longer tasks
-✅ Smart final summary with recommendations
-✅ Advanced system-level checks (crashes, throttling, OOM kills)
-✅ Fully offline-compatible — only installs what you choose
-✅ Clear indicators for slow operations
-✅ Optional full scan (98) and quick summary (99)
-✅ Easy-to-read ASCII-styled banners
-✅ Lightweight, Bash-only — no bloat
+A full-featured, menu-driven system health checker for DietPi-based systems.  
+Lightweight, fast, and entirely terminal-based.  
 
 ⸻
 
-📸 Menu Preview
+## 🚀 Features
+
+✅ Categorized health checks with clear output  
+✅ Live command output and spinner for longer tasks  
+✅ Smart final summary with recommendations  
+✅ Advanced system-level checks (crashes, throttling, OOM kills)  
+✅ Fully offline-compatible — only installs what you choose  
+✅ Clear indicators for slow operations  
+✅ Optional full scan (98) and quick summary (99)  
+✅ Easy-to-read ASCII-styled banners  
+✅ Lightweight, Bash-only — no bloat  
+
+⸻
+
+## 📸 Menu Preview
 
 ==== DietPi Health Menu =====
   1.  Top Memory Usage
@@ -51,65 +51,59 @@ Lightweight, fast, and entirely terminal-based.
 100.  Show Final Summary Report
 101.  Exit
 
+⸻
 
+## 📦 Installation
+
+git clone https://github.com/YOURUSERNAME/dietpi-health-check.git  
+cd dietpi-health-check  
+chmod +x health-check.sh  
+./health-check.sh  
 
 ⸻
 
-📦 Installation
+## 🔧 Requirements
 
-git clone https://github.com/YOURUSERNAME/dietpi-health-check.git
-cd dietpi-health-check
-chmod +x health-check.sh
-./health-check.sh
+Most functionality works out-of-the-box, but some commands are optional:  
 
-
-
-⸻
-
-🔧 Requirements
-
-Most functionality works out-of-the-box, but some commands are optional:
-
-Tool	Required For
-iftop	Network RX/TX stats
-iostat	I/O performance analysis (sysstat)
-speedtest-cli	Network speed test
-dig	Unbound DNS check
-docker	Docker container overview
-vcgencmd	Undervoltage detection (RPi only)
+Tool	Required For  
+iftop	Network RX/TX stats  
+iostat	I/O performance analysis (sysstat)  
+speedtest-cli	Network speed test  
+dig	Unbound DNS check  
+docker	Docker container overview   
+vcgencmd	Undervoltage detection (RPi only)  
 
 The script will ask for permission before installing any missing packages.
 
 ⸻
 
-📈 Final Summary Report Example
+## 📈 Final Summary Report Example
 
-After a full scan, you’ll get a smart overview like:
+After a full scan, you’ll get a smart overview like:  
 
-✅ General Health: GOOD
-🟡 Notes:
-• 1 failed service (systemd-networkd-wait-online)
-• High number of open ports — consider a firewall
-• Missing sudo users — consider adding your main user
-
-
+✅ General Health: GOOD  
+🟡 Notes:  
+• 1 failed service (systemd-networkd-wait-online)  
+• High number of open ports — consider a firewall  
+• Missing sudo users — consider adding your main user  
 
 ⸻
 
-🤝 Contributing
+## 🤝 Contributing
 
-Suggestions, PRs, and issue reports welcome!
-We’re aiming for a clean, readable, and portable Bash-only design.
-
-⸻
-
-🧠 Author
-
-Created by Olivier Verhoek
-Tested on Raspberry Pi 4 running DietPi
+Suggestions, PRs, and issue reports welcome!  
+We’re aiming for a clean, readable, and portable Bash-only design.  
 
 ⸻
 
-📜 License
+## 🧠 Author
+
+Created by Olivier Verhoek  
+Tested on Raspberry Pi 4 running DietPi  
+
+⸻
+
+## 📜 License
 
 MIT License — do what you want, just credit.
