@@ -3,8 +3,6 @@
 A full-featured, menu-driven system health checker for DietPi-based systems.  
 Lightweight, fast, and entirely terminal-based.  
 
-⸻
-
 ## 🚀 Features
 
 ✅ Categorized health checks with clear output  
