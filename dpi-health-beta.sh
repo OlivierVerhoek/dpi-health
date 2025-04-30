@@ -270,3 +270,91 @@ advanced_menu() {
         esac
     done
 }
+
+# === Full health check ===
+run_all_checks() {
+    health_memory
+    health_disk
+    health_io
+    health_cpu_processes
+    health_failed_services
+    health_kernel
+    health_network
+    health_network_iftop
+    health_ports
+    health_users
+    health_apt
+    health_fix
+    health_mnt_dirs
+    health_cron
+    health_zombies
+    health_docker
+    health_root_ssh
+    health_unbound_dns
+    health_speedtest
+    health_crash_check
+
+    echo -e "\n${bold}Wil je ook het eindrapport zien? (y/n)${reset}"
+    read -r answer
+    [[ $answer =~ ^[Yy]$ ]] && health_final_report
+
+    echo -e "\n${bold}Druk op enter om terug te keren...${reset}"
+    read
+}
+
+# === Menu ===
+while true; do
+    clear
+    echo -e "${bold}==== DietPi Health Menu =====${reset}"
+    echo "=== SYSTEEM ==="
+    echo "1. Top Memory Usage"
+    echo "2. Disk Usage"
+    echo "3. I/O Stats"
+    echo "4. Top CPU Processes"
+    echo "5. Failed Services"
+    echo "6. Kernel Messages"
+    echo "=== NETWERK ==="
+    echo "7. Network Check"
+    echo "8. Network RX/TX Stats"
+    echo "9. Listening Ports Summary"
+    echo "10. Network Speed Test"
+    echo "=== BEHEER ==="
+    echo "11. APT Updates"
+    echo "12. Fix Broken Packages"
+    echo "13. Largest Directories in /mnt (deep scan) [DUURT LANG]"
+    echo "14. Cron Jobs Overview"
+    echo "15. Users & Sudo"
+    echo "=== ADVANCED ==="
+    echo "16. Open Advanced Menu"
+    echo "96. Toon eindrapport (summary)"
+    echo "97. Quick Crash Check"
+    echo "98. Run Full Health Check (all) [INCL. LANGE TAKEN]"
+    echo "99. Quick Summary Overview"
+    echo "0. Exit"
+    echo "------------------------------"
+    read -rp "Select an option: " opt
+    case $opt in
+        1) health_memory;;
+        2) health_disk;;
+        3) health_io;;
+        4) health_cpu_processes;;
+        5) health_failed_services;;
+        6) health_kernel;;
+        7) health_network;;
+        8) health_network_iftop;;
+        9) health_ports;;
+        10) health_speedtest;;
+        11) health_apt;;
+        12) health_fix;;
+        13) health_mnt_dirs;;
+        14) health_cron;;
+        15) health_users;;
+        16) advanced_menu;;
+        96) health_final_report; read -p "Druk op enter om terug te keren...";;
+        97) health_crash_check; read -p "Druk op enter om terug te keren...";;
+        98) run_all_checks;;
+        99) health_memory; health_disk; health_ports; read -p "Druk op enter om terug te keren...";;
+        0) exit 0;;
+        *) echo "Ongeldige keuze."; sleep 1;;
+    esac
+done
