@@ -45,7 +45,6 @@ Lightweight, fast, and entirely terminal-based.
 === Advanced ===  
  20.  Crash/Throttling/OOM Analysis
  21.  Run All Advanced Checks
-
  98.  Run Full Health Check (all) [INCLUDES SLOW TASKS]
  99.  Quick Summary Overview
 100.  Show Final Summary Report
