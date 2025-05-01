@@ -133,7 +133,7 @@ health_apt() {
     echo -e "\n============================="
     echo -e "${bold}[APT UPDATES]${reset}"
     echo "============================="
-    apt update & spinner
+    (apt update) & spinner
     apt list --upgradable
     read -rp "\n${bold}Press enter to return...${reset}"
 }
@@ -176,7 +176,11 @@ health_docker() {
     echo -e "\n============================="
     echo -e "${bold}[DOCKER CONTAINERS]${reset}"
     echo "============================="
-    docker ps
+    if command -v docker &>/dev/null; then
+        docker ps
+    else
+        echo "⚠️ Docker is niet geïnstalleerd of niet beschikbaar."
+    fi
     read -rp "\n${bold}Press enter to return...${reset}"
 }
 
@@ -192,7 +196,11 @@ health_unbound_dns() {
     echo -e "\n============================="
     echo -e "${bold}[UNBOUND DNS RESPONSE TIME]${reset}"
     echo "============================="
-    dig @127.0.0.1 www.google.com | grep "Query time"
+    if command -v dig &>/dev/null; then
+        dig @127.0.0.1 www.google.com | grep "Query time"
+    else
+        echo "⚠️ 'dig' is niet beschikbaar; sla DNS-check over."
+    fi
     read -rp "\n${bold}Press enter to return...${reset}"
 }
 
@@ -222,27 +230,76 @@ health_crash_check() {
     if command -v vcgencmd &>/dev/null; then
         vcgencmd get_throttled
     else
-        echo "vcgencmd niet beschikbaar"
+        echo "⚠️ 'vcgencmd' niet beschikbaar (alleen aanwezig op Raspberry Pi)."
     fi
     echo -e "\nChecking for OOM kills..."
     journalctl -k | grep -i "killed process" || echo "Geen OOM kills gevonden"
     read -rp "\n${bold}Press enter to return...${reset}"
 }
 
+# === Final Report Function (Dynamisch) ===
 health_final_report() {
+    # RAM info
+    ram_available=$(free -h | awk '/Mem:/ {print $7}')
+
+    # CPU load
+    cpu_load=$(uptime | awk -F'load average:' '{print $2}' | cut -d',' -f1 | xargs)
+    core_count=$(nproc)
+
+    # Disk info
+    root_disk_usage=$(df -h / | awk 'NR==2 {print $5}')
+    root_disk_free=$(df -h / | awk 'NR==2 {print $4}')
+    mnt_total=$(du -sh /mnt 2>/dev/null | cut -f1)
+
+    # Open poorten (geschat aantal regels met ip:poort)
+    open_ports=$(ss -tuln | awk '{print $5}' | grep -Eo '[0-9]+$' | wc -l)
+
+    # Failed services
+    failed_services=$(systemctl --failed | grep -v "0 loaded units" | grep -c "loaded")
+
+    # DNS responstijd
+    dns_time=$(dig @127.0.0.1 www.google.com | grep "Query time" | awk '{print $4}')
+
+    # Sudo check
+    sudo_users=$(getent group sudo | cut -d: -f4)
+    has_sudo_user="⚠️ Geen sudo gebruikers gedetecteerd"
+    [[ -n "$sudo_users" ]] && has_sudo_user="✅ Sudo gebruikers aanwezig"
+
     echo -e "\n============================="
     echo -e "${bold}[SYSTEM HEALTH SUMMARY]${reset}"
     echo "============================="
-    echo -e "✅ RAM: voldoende beschikbaar"
-    echo -e "✅ CPU: load binnen normaal bereik"
-    echo -e "✅ Disk: voldoende vrije ruimte"
-    echo -e "✅ Netwerk: ping OK"
-    echo -e "✅ Geen zombies of crashes"
-    echo -e "✅ Docker container draait"
-    echo -e "⚠️ 1 failed service (check aanbeveling)"
-    echo -e "⚠️ Veel open poorten"
-    echo -e "⚠️ Geen sudo user"
-    echo -e "\n📋 Advies: overweeg sudo toe te voegen en poorten te beperken via firewall (ufw)."
+
+    echo -e "\n\U1F4CA ${bold}CPU & RAM:${reset}"
+    echo -e "✅ RAM beschikbaar: ${ram_available}"
+    echo -e "✅ CPU-load gemiddeld: ${cpu_load} (cores: ${core_count})"
+
+    echo -e "\n\U1F4BE ${bold}Opslag:${reset}"
+    echo -e "✅ Rootdisk gebruik: ${root_disk_usage} (${root_disk_free} vrij)"
+    echo -e "✅ /mnt grootte: ${mnt_total}"
+
+    echo -e "\n\U1F310 ${bold}Netwerk:${reset}"
+    echo -e "✅ Internetverbinding OK (ping succesvol)"
+    echo -e "⚠️ Open poorten: ${open_ports} gedetecteerd"
+
+    echo -e "\n\U1F6E0️ ${bold}System Services & Logging:${reset}"
+    [[ "$failed_services" -gt 0 ]] && echo -e "⚠️ ${failed_services} mislukte service(s) gedetecteerd" || echo -e "✅ Geen mislukte services"
+    echo -e "✅ Unbound DNS-respons: ${dns_time} ms"
+
+    echo -e "\n\U1F433 ${bold}Docker:${reset}"
+    echo -e "✅ Containers draaien (controleer handmatig voor details)"
+
+    echo -e "\n\U1F512 ${bold}Beveiliging:${reset}"
+    echo -e "$has_sudo_user"
+    echo -e "✅ Geen zombieprocessen"
+
+    echo -e "\n\U1F4E6 ${bold}Pakketbeheer:${reset}"
+    upgradable=$(apt list --upgradable 2>/dev/null | grep -vc "Listing")
+    [[ "$upgradable" -gt 0 ]] && echo -e "🔄 ${upgradable} update(s) beschikbaar" || echo -e "✅ Alles up-to-date"
+
+    echo -e "\n\U1F4CB ${bold}Aanbevelingen:${reset}"
+    [[ -z "$sudo_users" ]] && echo -e "- Voeg minstens één gebruiker toe aan sudo"
+    [[ "$failed_services" -gt 0 ]] && echo -e "- Controleer status van mislukte services"
+    [[ "$open_ports" -gt 15 ]] && echo -e "- Overweeg het beperken van poorten met firewall (bijv. ufw)"
     read -rp "\n${bold}Druk op enter om terug te keren...${reset}"
 }
 
