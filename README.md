@@ -87,7 +87,7 @@ We’re aiming for a clean, readable, and portable Bash-only design.
 ## 🧠 Author
 
 Created by Olivier Verhoek  
-Tested on Raspberry Pi 4 running DietPi  
+Tested on Raspberry Pi 4 running DietPi (Debian)  
 
 ## 📜 License
 
