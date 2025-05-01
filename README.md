@@ -43,7 +43,7 @@ Lightweight, fast, and entirely terminal-based.
  19.  Network Speed Test
 
 === Advanced ===
- 20.  Crash/Throttling/OOM Analysis
+   20.  Crash/Throttling/OOM Analysis
  21.  Run All Advanced Checks
 
  98.  Run Full Health Check (all) [INCLUDES SLOW TASKS]
