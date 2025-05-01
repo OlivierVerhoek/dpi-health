@@ -42,8 +42,8 @@ Lightweight, fast, and entirely terminal-based.
  18.  Unbound DNS Response Time
  19.  Network Speed Test
 
-=== Advanced ===
-   20.  Crash/Throttling/OOM Analysis
+=== Advanced ===  
+ 20.  Crash/Throttling/OOM Analysis
  21.  Run All Advanced Checks
 
  98.  Run Full Health Check (all) [INCLUDES SLOW TASKS]
