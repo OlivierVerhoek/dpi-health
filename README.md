@@ -14,6 +14,9 @@ Lightweight, fast, and entirely terminal-based.
 ✅ Optional full scan (98) and quick summary (99)  
 ✅ Easy-to-read ASCII-styled banners  
 ✅ Lightweight, Bash-only — no bloat  
+✅ Slimme foutafhandeling voor ontbrekende tools (zoals `dig`, `docker`, `vcgencmd`)  
+✅ Verbeterde spinner voor visueel nette lange taken  
+✅ Eindrapport met status per onderdeel en aanbevelingen  
 
 
 ## 📸 Menu Preview
@@ -52,18 +55,18 @@ Lightweight, fast, and entirely terminal-based.
 
 git clone https://github.com/YOURUSERNAME/dietpi-health-check.git  
 cd dietpi-health-check  
-chmod +x health-check.sh  
-./health-check.sh  
+chmod +x dpi-health.sh  
+./dpi-health.sh  
 
 ## 🔧 Requirements
 
-Most functionality works out-of-the-box, but some commands are optional:  
+Voor volledige functionaliteit zijn onderstaande tools aanbevolen:
 
 Tool	Required For  
 iftop	Network RX/TX stats  
 iostat	I/O performance analysis (sysstat)  
 speedtest-cli	Network speed test  
-dig	Unbound DNS check  
+dig	Unbound DNS check (via dnsutils)  
 docker	Docker container overview   
 vcgencmd	Undervoltage detection (RPi only)  
 
@@ -78,6 +81,8 @@ After a full scan, you’ll get a smart overview like:
 • 1 failed service (systemd-networkd-wait-online)  
 • High number of open ports — consider a firewall  
 • Missing sudo users — consider adding your main user  
+
+Dit rapport bevat nu emoji’s per categorie (CPU, RAM, Disk, Netwerk, etc.) en automatische aanbevelingen.
 
 ## 🤝 Contributing
 
