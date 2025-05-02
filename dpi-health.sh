@@ -241,16 +241,20 @@ health_speedtest() {
     echo "============================="
 
     if command -v speedtest &>/dev/null; then
-        if ! speedtest --progress=no; then
+        output=$(speedtest 2>&1)
+        if [[ $? -ne 0 ]]; then
             echo -e "⚠️ Speedtest (Ookla) failed or was blocked. Skipping."
-        fi
-    elif command -v speedtest-cli &>/dev/null; then
-        if ! speedtest-cli | grep -q "Download"; then
-            echo -e "⚠️ Speedtest (speedtest-cli) failed or was blocked. Skipping."
+        else
+            echo "$output"
+            download=$(echo "$output" | grep -i "Download" | awk '{print $(NF-1), $NF}')
+            upload=$(echo "$output" | grep -i "Upload" | awk '{print $(NF-1), $NF}')
+            echo -e "\n${bold}Summary:${reset}"
+            echo "⬇️ Download Speed: $download"
+            echo "⬆️ Upload Speed:   $upload"
         fi
     else
-        echo "⚠️ No speedtest tool available."
-        require_tool speedtest-cli speedtest-cli && speedtest-cli
+        echo "⚠️ Ookla speedtest tool is not installed."
+        require_tool speedtest speedtest && health_speedtest
     fi
 
     echo -e "\n${bold}Press enter to return...${reset}"
