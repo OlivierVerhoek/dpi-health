@@ -92,9 +92,18 @@ health_failed_services() {
 
 health_kernel() {
     echo -e "\n============================="
-    echo -e "${bold}[KERNEL MESSAGES]${reset}"
+    echo -e "${bold}[KERNEL MESSAGES - ERRORS & WARNINGS ONLY]${reset}"
     echo "============================="
-    dmesg | tail -n 20
+
+    if command -v journalctl &>/dev/null; then
+        journalctl -k --priority=3..4 --no-pager -n 20
+    elif dmesg --help 2>&1 | grep -q -- '--level'; then
+        dmesg --ctime --level=err,warn | tail -n 20
+    else
+        echo "Note: No advanced filtering available. Showing last 20 dmesg lines:"
+        dmesg | tail -n 20
+    fi
+
     echo -e "\n${bold}Press enter to return...${reset}"
     read
 }
@@ -226,13 +235,20 @@ health_speedtest() {
     echo -e "\n============================="
     echo -e "${bold}[NETWORK SPEED TEST]${reset}"
     echo "============================="
+
     if command -v speedtest &>/dev/null; then
-        speedtest
+        if ! speedtest --progress=no; then
+            echo -e "⚠️ Speedtest (Ookla) failed or was blocked. Skipping."
+        fi
     elif command -v speedtest-cli &>/dev/null; then
-        speedtest-cli
+        if ! speedtest-cli | grep -q "Download"; then
+            echo -e "⚠️ Speedtest (speedtest-cli) failed or was blocked. Skipping."
+        fi
     else
+        echo "⚠️ No speedtest tool available."
         require_tool speedtest-cli speedtest-cli && speedtest-cli
     fi
+
     echo -e "\n${bold}Press enter to return...${reset}"
     read
 }
