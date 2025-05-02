@@ -1,98 +1,67 @@
-# 🩺 DietPi Deluxe Terminal Health Check
+# DietPi Deluxe Health Check
 
-A full-featured, menu-driven system health checker for DietPi-based systems.  
-Lightweight, fast, and entirely terminal-based.  
+A powerful and interactive terminal-based health check toolkit for DietPi and other Debian-based systems.
 
-## 🚀 Features
+## 🧰 Features
 
-✅ Categorized health checks with clear output  
-✅ Live command output and spinner for longer tasks  
-✅ Smart final summary with recommendations  
-✅ Advanced system-level checks (crashes, throttling, OOM kills)  
-✅ Fully offline-compatible — only installs what you choose  
-✅ Clear indicators for slow operations  
-✅ Optional full scan (98) and quick summary (99)  
-✅ Easy-to-read ASCII-styled banners  
-✅ Lightweight, Bash-only — no bloat  
-✅ Slimme foutafhandeling voor ontbrekende tools (zoals `dig`, `docker`, `vcgencmd`)  
-✅ Verbeterde spinner voor visueel nette lange taken  
-✅ Eindrapport met status per onderdeel en aanbevelingen  
+- 📊 System stats: CPU, RAM, disk, I/O, top processes
+- 🌐 Network diagnostics: ping, speedtest, open ports, DNS response
+- 🛠 Maintenance utilities: APT updates, fix broken packages, cron job listing
+- 🔐 Security checks: zombie processes, sudo access, root SSH login
+- 🐳 Docker: container overview (if installed)
+- 📦 Package visibility: upgradable packages
+- 📋 Final summary report (with recommendations)
+- 🌀 Spinner and step-by-step feedback
+- ✅ Smart defaults:
+  - Unbound DNS detection on `127.0.0.1#5335`
+  - Pi-specific checks (vcgencmd)
+  - Tool installation prompts
 
+## 🚀 Getting Started
 
-## 📸 Menu Preview
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/your-user/dpi-health.git
+   cd dpi-health
+   ```
 
-==== DietPi Health Menu =====
-  1.  Top Memory Usage
-  2.  Disk Usage
-  3.  I/O Stats
-  4.  Top CPU Processes
-  5.  Failed Services
-  6.  Kernel Messages
-  7.  Network Check
-  8.  Network RX/TX Stats
-  9.  Listening Ports Summary
- 10.  Users & Sudo
- 11.  APT Updates
- 12.  Fix Broken Packages
- 13.  Largest Directories in /mnt (deep scan) [SLOW]
- 14.  Cron Jobs Overview
- 15.  Zombie Processes
- 16.  Docker Container Status
- 17.  Root SSH Login Check
- 18.  Unbound DNS Response Time
- 19.  Network Speed Test
+2. Make the script executable:
+   ```bash
+   chmod +x dpi-health.sh
+   ```
 
-=== Advanced ===    
- 20.  Crash/Throttling/OOM Analysis  
- 21.  Run All Advanced Checks  
- 98.  Run Full Health Check (all) [INCLUDES SLOW TASKS]  
- 99.  Quick Summary Overview  
-100.  Show Final Summary Report  
-101.  Exit  
+3. Run the script:
+   ```bash
+   ./dpi-health.sh
+   ```
 
-## 📦 Installation
+## 📖 Menu Overview
 
-git clone https://github.com/YOURUSERNAME/dietpi-health-check.git  
-cd dietpi-health-check  
-chmod +x dpi-health.sh  
-./dpi-health.sh  
+| Option | Description                                      |
+|--------|--------------------------------------------------|
+| `1–15` | Individual system/network/maintenance checks     |
+| `16`   | Advanced submenu: DNS, Docker, zombie, root SSH  |
+| `96`   | 🔍 Summary-only overview                         |
+| `97`   | Quick crash/throttle check                       |
+| `98`   | Full check — choose between batch or per-check   |
+| `99`   | Quick peek: memory, disk, ports                  |
+| `0`    | Exit                                             |
 
-## 🔧 Requirements
+## 📦 Dependencies
 
-Voor volledige functionaliteit zijn onderstaande tools aanbevolen:
+Minimal set, installed as needed:
+- `dig`, `ping`, `ss`, `free`, `df`, `ps`, `journalctl`, `docker`
+- Optional: `speedtest`, `iftop`, `iostat`, `vcgencmd` (RPi)
 
-Tool	Required For  
-iftop	Network RX/TX stats  
-iostat	I/O performance analysis (sysstat)  
-speedtest-cli	Network speed test  
-dig	Unbound DNS check (via dnsutils)  
-docker	Docker container overview   
-vcgencmd	Undervoltage detection (RPi only)  
+The script will offer to install these interactively via `apt`.
 
-The script will ask for permission before installing any missing packages.
+## 🔐 Compatibility
 
-## 📈 Final Summary Report Example
+- Optimized for DietPi on Raspberry Pi (also runs fine on other Debian systems)
+- Safe to run as user; only escalates when needed
+- Resilient to missing tools or non-Pi environments
 
-After a full scan, you’ll get a smart overview like:  
+## 🙏 Credits
 
-✅ General Health: GOOD  
-🟡 Notes:  
-• 1 failed service (systemd-networkd-wait-online)  
-• High number of open ports — consider a firewall  
-• Missing sudo users — consider adding your main user  
-
-Dit rapport bevat nu emoji’s per categorie (CPU, RAM, Disk, Netwerk, etc.) en automatische aanbevelingen.
-
-## 🤝 Contributing
-
-Suggestions, PRs, and issue reports welcome!  
-We’re aiming for a clean, readable, and portable Bash-only design.  
-
-## 🧠 Author
-
-Created by Olivier Verhoek  
-Tested on Raspberry Pi 4 running DietPi (Debian)  
-
-## 📜 License
-
-MIT License — do what you want, just credit.
+Crafted with ❤️ by Olivier.  
+Contributions welcome via issues or pull requests!
