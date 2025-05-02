@@ -405,6 +405,37 @@ advanced_menu() {
     done
 }
 
+# === Interactive full health check ===
+run_all_checks_interactive() {
+    health_memory
+    health_disk
+    health_io
+    health_cpu_processes
+    health_failed_services
+    health_kernel
+    health_network
+    health_network_iftop
+    health_ports
+    health_users
+    health_apt
+    health_fix
+    health_mnt_dirs
+    health_cron
+    health_zombies
+    health_docker
+    health_root_ssh
+    health_unbound_dns
+    health_speedtest
+    health_crash_check
+
+    echo -e "\n${bold}Would you like to see the final report? (y/n)${reset}"
+    read -r answer
+    [[ "$answer" =~ ^[Yy]$ ]] && health_final_report
+
+    echo -e "\n${bold}Press enter to return...${reset}"
+    read -r
+}
+
 # === Full health check ===
 run_all_checks() {
     (
@@ -488,7 +519,17 @@ while true; do
         16) advanced_menu;;
         96) (health_final_report) & spinner; echo -e "\n${bold}Press enter to return...${reset}"; read -r;;
         97) health_crash_check;;
-        98) run_all_checks;;
+        98)
+            echo -e "\n${bold}Run all checks at once or step-by-step?${reset}"
+            echo "1. All at once"
+            echo "2. Step-by-step"
+            read -r -p "Choose mode [1/2]: " mode
+            if [[ "$mode" == "2" ]]; then
+                run_all_checks_interactive
+            else
+                run_all_checks
+            fi
+            ;;
         99) health_memory; health_disk; health_ports;;
         0) exit 0;;
         *) echo "Invalid choice."; sleep 1;;
