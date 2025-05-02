@@ -268,7 +268,12 @@ health_crash_check() {
         echo "⚠️ 'vcgencmd' not available (only present on Raspberry Pi)."
     fi
     echo -e "\nChecking for OOM kills..."
-    journalctl -k | grep -i "killed process" || echo "No OOM kills found"
+    oom_output=$(journalctl -k 2>&1 | tee /tmp/journal_check.log | grep -i "killed process")
+    if grep -qi "truncated" /tmp/journal_check.log; then
+        echo "⚠️ Warning: system journal appears truncated or incomplete. Consider enabling persistent logging."
+    fi
+    echo "$oom_output"
+    [ -z "$oom_output" ] && echo "No OOM kills found"
     echo -e "\n${bold}Press enter to return...${reset}"
     read
 }
@@ -445,7 +450,7 @@ while true; do
         15) health_users;;
         16) advanced_menu;;
         96) health_final_report; echo -e "Press enter to return..."; read;;
-        97) health_crash_check; echo -e "Press enter to return..."; read;;
+        97) health_crash_check;;
         98) run_all_checks;;
         99) health_memory; health_disk; health_ports; echo -e "Press enter to return..."; read;;
         0) exit 0;;
