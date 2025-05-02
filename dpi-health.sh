@@ -7,7 +7,6 @@
 # === Styling ===
 bold="\e[1m"
 reset="\e[0m"
-gray="\e[90m"
 
 # === Spinner ===
 spinner() {
@@ -28,8 +27,8 @@ require_tool() {
     local cmd="$1"
     local pkg="$2"
     if ! command -v "$cmd" &>/dev/null; then
-        read -rp "[!] '$cmd' is not installed. Install now? (y/n): " choice
-        if [[ $choice =~ ^[Yy]$ ]]; then
+        read -r -rp "[!] '$cmd' is not installed. Install now? (y/n): " choice
+        if [[ "$choice" =~ ^[Yy]$ ]]; then
             apt install -y "$pkg"
         else
             echo "[-] Skipping $cmd"
@@ -50,7 +49,7 @@ health_memory() {
     echo -e "\nTop memory-using processes:"
     ps aux --sort=-%mem | awk 'NR==1 || NR<=6'
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_disk() {
@@ -59,7 +58,7 @@ health_disk() {
     echo "============================="
     df -h | grep -v tmpfs
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_io() {
@@ -69,7 +68,7 @@ health_io() {
     require_tool iostat sysstat || return
     iostat -xz 1 3
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_cpu_processes() {
@@ -78,7 +77,7 @@ health_cpu_processes() {
     echo "============================="
     ps aux --sort=-%cpu | awk 'NR==1 || NR<=6'
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_failed_services() {
@@ -87,7 +86,7 @@ health_failed_services() {
     echo "============================="
     systemctl --failed
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_kernel() {
@@ -105,7 +104,7 @@ health_kernel() {
     fi
 
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_network() {
@@ -115,7 +114,7 @@ health_network() {
     ping -c 4 1.1.1.1
     ping -c 4 google.com
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_network_iftop() {
@@ -125,7 +124,7 @@ health_network_iftop() {
     require_tool iftop iftop || return
     iftop -t -s 10 -L 10
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_ports() {
@@ -134,7 +133,7 @@ health_ports() {
     echo "============================="
     ss -tuln | awk '{print $5}' | sort | uniq -c | sort -nr | head -n 15
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_users() {
@@ -145,7 +144,7 @@ health_users() {
     echo -e "\nSudo group members:"
     getent group sudo
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_apt() {
@@ -155,7 +154,7 @@ health_apt() {
     (apt update) & spinner
     apt list --upgradable
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_fix() {
@@ -164,7 +163,7 @@ health_fix() {
     echo "============================="
     apt install -f
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_mnt_dirs() {
@@ -174,7 +173,7 @@ health_mnt_dirs() {
     echo "[!] This may take a while..."
     du -h --max-depth=3 /mnt 2>/dev/null | sort -hr | head -n 20
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_cron() {
@@ -184,16 +183,21 @@ health_cron() {
     for f in /etc/cron.*; do echo -e "\n$f:"; ls -lh "$f"; done
     crontab -l 2>/dev/null || echo "no crontab for root"
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_zombies() {
     echo -e "\n============================="
-    echo -e "${bold}[ZOMBIE PROCESSES]${reset}"
+    echo -e "${bold}[ZOMBIE PROCESSES]${reset}"ß
     echo "============================="
-    ps aux | awk '{ if ($8 == "Z") print }'
+    zombie_output=$(ps aux | awk '$8 == "Z"')
+    if [[ -z "$zombie_output" ]]; then
+        echo "✅ No zombie processes found"
+    else
+        echo "$zombie_output"
+    fi
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_docker() {
@@ -206,7 +210,7 @@ health_docker() {
         echo "⚠️ Docker is not installed or not available."
     fi
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_root_ssh() {
@@ -215,7 +219,7 @@ health_root_ssh() {
     echo "============================="
     grep PermitRootLogin /etc/ssh/sshd_config 2>/dev/null || echo "sshd_config not found"
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_unbound_dns() {
@@ -225,10 +229,10 @@ health_unbound_dns() {
     if command -v dig &>/dev/null; then
         dig @127.0.0.1 www.google.com | grep "Query time"
     else
-        echo "⚠️ 'dig' is not available; skipping DNS check."
+        echo "⚠️ \"dig\" is not available; skipping DNS check."
     fi
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_speedtest() {
@@ -250,7 +254,7 @@ health_speedtest() {
     fi
 
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 health_crash_check() {
@@ -265,7 +269,7 @@ health_crash_check() {
     if command -v vcgencmd &>/dev/null; then
         vcgencmd get_throttled
     else
-        echo "⚠️ 'vcgencmd' not available (only present on Raspberry Pi)."
+        echo "⚠️ \"vcgencmd\" not available (only present on Raspberry Pi)."
     fi
     echo -e "\nChecking for OOM kills..."
     oom_output=$(journalctl -k 2>&1 | tee /tmp/journal_check.log | grep -i "killed process")
@@ -273,9 +277,9 @@ health_crash_check() {
         echo "⚠️ Warning: system journal appears truncated or incomplete. Consider enabling persistent logging."
     fi
     echo "$oom_output"
-    [ -z "$oom_output" ] && echo "No OOM kills found"
+    [[ -z "$oom_output" ]] && echo "No OOM kills found"
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 # === Final Report Function (Dynamic) ===
@@ -316,8 +320,6 @@ health_final_report() {
 
     echo -e "\n\U1F4BE ${bold}Storage:${reset}"
     echo -e "✅ Root disk usage: ${root_disk_usage} (${root_disk_free} free)"
-    echo -e "✅ /mnt size: ${mnt_total}"
-
     echo -e "\n\U1F310 ${bold}Network:${reset}"
     echo -e "✅ Internet connection OK (ping successful)"
     echo -e "⚠️ Open ports: ${open_ports} detected"
@@ -342,7 +344,7 @@ health_final_report() {
     [[ "$failed_services" -gt 0 ]] && echo -e "- Check status of failed services"
     [[ "$open_ports" -gt 15 ]] && echo -e "- Consider limiting ports with firewall (e.g. ufw)"
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 # === Advanced submenu ===
@@ -357,7 +359,7 @@ advanced_menu() {
         echo "5. Unbound DNS Response Time"
         echo "0. Back"
         echo "------------------------------"
-        read -rp "Select an option: " adv
+        read -r -rp "Select an option: " adv
         case $adv in
             1) health_crash_check;;
             2) health_zombies;;
@@ -395,10 +397,10 @@ run_all_checks() {
 
     echo -e "\n${bold}Would you like to see the final report? (y/n)${reset}"
     read -r answer
-    [[ $answer =~ ^[Yy]$ ]] && health_final_report
+    [[ "$answer" =~ ^[Yy]$ ]] && health_final_report
 
     echo -e "\n${bold}Press enter to return...${reset}"
-    read
+    read -r
 }
 
 # === Menu ===
@@ -431,7 +433,7 @@ while true; do
     echo "99. Quick Summary Overview"
     echo "0. Exit"
     echo "------------------------------"
-    read -rp "Select an option: " opt
+    read -r -rp "Select an option: " opt
     case $opt in
         1) health_memory;;
         2) health_disk;;
@@ -449,10 +451,10 @@ while true; do
         14) health_cron;;
         15) health_users;;
         16) advanced_menu;;
-        96) health_final_report; echo -e "Press enter to return..."; read;;
+        96) health_final_report; echo -e "Press enter to return..."; read -r;;
         97) health_crash_check;;
         98) run_all_checks;;
-        99) health_memory; health_disk; health_ports; echo -e "Press enter to return..."; read;;
+        99) health_memory; health_disk; health_ports; echo -e "Press enter to return..."; read -r;;
         0) exit 0;;
         *) echo "Invalid choice."; sleep 1;;
     esac
