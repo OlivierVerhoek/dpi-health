@@ -227,7 +227,12 @@ health_unbound_dns() {
     echo -e "${bold}[UNBOUND DNS RESPONSE TIME]${reset}"
     echo "============================="
     if command -v dig &>/dev/null; then
-        dig @127.0.0.1 www.google.com | grep "Query time"
+        dns_time=$(timeout 5 dig @127.0.0.1 -p 5335 www.google.com 2>/dev/null | grep "Query time" | awk '{print $4}')
+        if [[ -z "$dns_time" ]]; then
+            dns_time=$(timeout 5 dig @127.0.0.1 www.google.com 2>/dev/null | grep "Query time" | awk '{print $4}')
+        fi
+        [[ -z "$dns_time" ]] && dns_time="⚠️ DNS unreachable or timed out"
+        echo "DNS response time: ${dns_time} ms"
     else
         echo "⚠️ \"dig\" is not available; skipping DNS check."
     fi
@@ -272,8 +277,10 @@ health_crash_check() {
     echo -e "\nChecking undervoltage/throttling..."
     if command -v vcgencmd &>/dev/null; then
         vcgencmd get_throttled
+    elif [ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq ]; then
+        echo "⚠️ vcgencmd not found. Running on non-RPi system with CPU freq control."
     else
-        echo "⚠️ \"vcgencmd\" not available (only present on Raspberry Pi)."
+        echo "⚠️ vcgencmd not found and no CPU throttling interface detected."
     fi
     echo -e "\nChecking for OOM kills..."
     oom_output=$(journalctl -k 2>&1 | tee /tmp/journal_check.log | grep -i "killed process")
@@ -288,67 +295,89 @@ health_crash_check() {
 
 # === Final Report Function (Dynamic) ===
 health_final_report() {
-    # RAM info
-    ram_available=$(free -h | awk '/Mem:/ {print $7}')
+    echo -ne "\n[*] Gathering final report. Please wait... "
 
-    # CPU load
-    cpu_load=$(uptime | awk -F'load average:' '{print $2}' | cut -d',' -f1 | xargs)
-    core_count=$(nproc)
+    (
+        echo "[1/10] Checking RAM usage..."
+        ram_available=$(free -h | awk '/Mem:/ {print $7}')
 
-    # Disk info
-    root_disk_usage=$(df -h / | awk 'NR==2 {print $5}')
-    root_disk_free=$(df -h / | awk 'NR==2 {print $4}')
-    mnt_total=$(du -sh /mnt 2>/dev/null | cut -f1)
+        echo "[2/10] Measuring CPU load..."
+        cpu_load=$(uptime | awk -F'load average:' '{print $2}' | cut -d',' -f1 | xargs)
+        core_count=$(nproc)
 
-    # Open ports (estimated number of lines with ip:port)
-    open_ports=$(ss -tuln | awk '{print $5}' | grep -Eo '[0-9]+$' | wc -l)
+        echo "[3/10] Gathering disk usage..."
+        root_disk_usage=$(df -h / | awk 'NR==2 {print $5}')
+        root_disk_free=$(df -h / | awk 'NR==2 {print $4}')
+        mnt_total=$(du -sh /mnt 2>/dev/null | cut -f1)
 
-    # Failed services
-    failed_services=$(systemctl --failed | grep -v "0 loaded units" | grep -c "loaded")
+        echo "[4/10] Counting open ports..."
+        open_ports=$(ss -tuln | awk '{print $5}' | grep -Eo '[0-9]+$' | wc -l)
 
-    # DNS response time
-    dns_time=$(dig @127.0.0.1 www.google.com | grep "Query time" | awk '{print $4}')
+        echo "[5/10] Checking failed services..."
+        failed_services=$(systemctl --failed | grep -v "0 loaded units" | grep -c "loaded")
 
-    # Sudo check
-    sudo_users=$(getent group sudo | cut -d: -f4)
-    has_sudo_user="⚠️ No sudo users detected"
-    [[ -n "$sudo_users" ]] && has_sudo_user="✅ Sudo users present"
+        echo "[6/10] Measuring DNS response time..."
+        dns_time=$(timeout 5 dig @127.0.0.1 -p 5335 www.google.com 2>/dev/null | grep "Query time" | awk '{print $4}')
+        if [[ -z "$dns_time" ]]; then
+            dns_time=$(timeout 5 dig @127.0.0.1 www.google.com 2>/dev/null | grep "Query time" | awk '{print $4}')
+        fi
+        [[ -z "$dns_time" ]] && dns_time="⚠️ DNS unreachable or timed out"
 
-    echo -e "\n============================="
-    echo -e "${bold}[SYSTEM HEALTH SUMMARY]${reset}"
-    echo "============================="
+        echo "[7/10] Checking sudo users..."
+        sudo_users=$(getent group sudo | cut -d: -f4)
+        has_sudo_user="⚠️ No sudo users detected"
+        [[ -n "$sudo_users" ]] && has_sudo_user="✅ Sudo users present"
 
-    echo -e "\n\U1F4CA ${bold}CPU & RAM:${reset}"
-    echo -e "✅ RAM available: ${ram_available}"
-    echo -e "✅ Average CPU load: ${cpu_load} (cores: ${core_count})"
+        echo "[8/10] Checking Docker containers..."
+        docker_status="✅ Containers running (check manually for details)"
 
-    echo -e "\n\U1F4BE ${bold}Storage:${reset}"
-    echo -e "✅ Root disk usage: ${root_disk_usage} (${root_disk_free} free)"
-    echo -e "\n\U1F310 ${bold}Network:${reset}"
-    echo -e "✅ Internet connection OK (ping successful)"
-    echo -e "⚠️ Open ports: ${open_ports} detected"
+        echo "[9/10] Checking for zombie processes..."
+        zombies=$(ps aux | awk '$8 == "Z"')
+        [[ -z "$zombies" ]] && zombie_status="✅ No zombie processes" || zombie_status="⚠️ Zombie processes detected"
 
-    echo -e "\n\U1F6E0️ ${bold}System Services & Logging:${reset}"
-    [[ "$failed_services" -gt 0 ]] && echo -e "⚠️ ${failed_services} failed service(s) detected" || echo -e "✅ No failed services"
-    echo -e "✅ Unbound DNS response: ${dns_time} ms"
+        echo "[10/10] Checking APT updates..."
+        upgradable=$(apt list --upgradable 2>/dev/null | grep -vc "Listing")
 
-    echo -e "\n\U1F433 ${bold}Docker:${reset}"
-    echo -e "✅ Containers running (check manually for details)"
+        # Remove spinner line
+        printf "\r%*s\r" 30 " "
 
-    echo -e "\n\U1F512 ${bold}Security:${reset}"
-    echo -e "$has_sudo_user"
-    echo -e "✅ No zombie processes"
+        echo -e "\n============================="
+        echo -e "${bold}[SYSTEM HEALTH SUMMARY]${reset}"
+        echo "============================="
 
-    echo -e "\n\U1F4E6 ${bold}Package Management:${reset}"
-    upgradable=$(apt list --upgradable 2>/dev/null | grep -vc "Listing")
-    [[ "$upgradable" -gt 0 ]] && echo -e "🔄 ${upgradable} update(s) available" || echo -e "✅ All up-to-date"
+        echo -e "\n\U1F4CA ${bold}CPU & RAM:${reset}"
+        echo -e "✅ RAM available: ${ram_available}"
+        echo -e "✅ Average CPU load: ${cpu_load} (cores: ${core_count})"
 
-    echo -e "\n\U1F4CB ${bold}Recommendations:${reset}"
-    [[ -z "$sudo_users" ]] && echo -e "- Add at least one user to sudo"
-    [[ "$failed_services" -gt 0 ]] && echo -e "- Check status of failed services"
-    [[ "$open_ports" -gt 15 ]] && echo -e "- Consider limiting ports with firewall (e.g. ufw)"
-    echo -e "\n${bold}Press enter to return...${reset}"
-    read -r
+        echo -e "\n\U1F4BE ${bold}Storage:${reset}"
+        echo -e "✅ Root disk usage: ${root_disk_usage} (${root_disk_free} free)"
+        echo -e "📁 /mnt usage total: ${mnt_total}"
+
+        echo -e "\n\U1F310 ${bold}Network:${reset}"
+        echo -e "✅ Internet connection OK (ping successful)"
+        echo -e "⚠️ Open ports: ${open_ports} detected"
+
+        echo -e "\n\U1F6E0️ ${bold}System Services & Logging:${reset}"
+        [[ "$failed_services" -gt 0 ]] && echo -e "⚠️ ${failed_services} failed service(s) detected" || echo -e "✅ No failed services"
+        echo -e "✅ Unbound DNS response: ${dns_time} ms"
+
+        echo -e "\n\U1F433 ${bold}Docker:${reset}"
+        echo -e "$docker_status"
+
+        echo -e "\n\U1F512 ${bold}Security:${reset}"
+        echo -e "$has_sudo_user"
+        echo -e "$zombie_status"
+
+        echo -e "\n\U1F4E6 ${bold}Package Management:${reset}"
+        [[ "$upgradable" -gt 0 ]] && echo -e "🔄 ${upgradable} update(s) available" || echo -e "✅ All up-to-date"
+
+        echo -e "\n\U1F4CB ${bold}Recommendations:${reset}"
+        [[ -z "$sudo_users" ]] && echo -e "- Add at least one user to sudo"
+        [[ "$failed_services" -gt 0 ]] && echo -e "- Check status of failed services"
+        [[ "$open_ports" -gt 15 ]] && echo -e "- Consider limiting ports with firewall (e.g. ufw)"
+        echo -e "\n${bold}Press enter to return...${reset}"
+        read -r
+    ) & spinner
 }
 
 # === Advanced submenu ===
@@ -378,33 +407,35 @@ advanced_menu() {
 
 # === Full health check ===
 run_all_checks() {
-    health_memory
-    health_disk
-    health_io
-    health_cpu_processes
-    health_failed_services
-    health_kernel
-    health_network
-    health_network_iftop
-    health_ports
-    health_users
-    health_apt
-    health_fix
-    health_mnt_dirs
-    health_cron
-    health_zombies
-    health_docker
-    health_root_ssh
-    health_unbound_dns
-    health_speedtest
-    health_crash_check
+    (
+        echo "[1/20] Top Memory Usage..."; health_memory
+        echo "[2/20] Disk Usage..."; health_disk
+        echo "[3/20] I/O Stats..."; health_io
+        echo "[4/20] Top CPU Processes..."; health_cpu_processes
+        echo "[5/20] Failed Services..."; health_failed_services
+        echo "[6/20] Kernel Messages..."; health_kernel
+        echo "[7/20] Network Check..."; health_network
+        echo "[8/20] Network RX/TX Stats..."; health_network_iftop
+        echo "[9/20] Listening Ports Summary..."; health_ports
+        echo "[10/20] Users & Sudo..."; health_users
+        echo "[11/20] APT Updates..."; health_apt
+        echo "[12/20] Fix Broken Packages..."; health_fix
+        echo "[13/20] Largest Directories in /mnt..."; health_mnt_dirs
+        echo "[14/20] Cron Jobs Overview..."; health_cron
+        echo "[15/20] Zombie Processes..."; health_zombies
+        echo "[16/20] Docker Containers..."; health_docker
+        echo "[17/20] Root SSH Login Check..."; health_root_ssh
+        echo "[18/20] Unbound DNS Response Time..."; health_unbound_dns
+        echo "[19/20] Network Speed Test..."; health_speedtest
+        echo "[20/20] Crash & Throttle Check..."; health_crash_check
 
-    echo -e "\n${bold}Would you like to see the final report? (y/n)${reset}"
-    read -r answer
-    [[ "$answer" =~ ^[Yy]$ ]] && health_final_report
+        echo -e "\n${bold}Would you like to see the final report? (y/n)${reset}"
+        read -r answer
+        [[ "$answer" =~ ^[Yy]$ ]] && health_final_report
 
-    echo -e "\n${bold}Press enter to return...${reset}"
-    read -r
+        echo -e "\n${bold}Press enter to return...${reset}"
+        read -r
+    ) & spinner
 }
 
 # === Menu ===
@@ -431,10 +462,10 @@ while true; do
     echo "15. Users & Sudo"
     echo "=== ADVANCED ==="
     echo "16. Open Advanced Menu"
-    echo "96. Show final report (summary)"
+    echo "96. Show summary only (quick health overview)"
     echo "97. Quick Crash Check"
-    echo "98. Run Full Health Check (all) [INCL. LONG TASKS]"
-    echo "99. Quick Summary Overview"
+    echo "98. Run full health check + optional summary"
+    echo "99. Quick peek: memory, disk, ports"
     echo "0. Exit"
     echo "------------------------------"
     read -r -rp "Select an option: " opt
@@ -455,10 +486,10 @@ while true; do
         14) health_cron;;
         15) health_users;;
         16) advanced_menu;;
-        96) health_final_report; echo -e "Press enter to return..."; read -r;;
+        96) (health_final_report) & spinner; echo -e "\n${bold}Press enter to return...${reset}"; read -r;;
         97) health_crash_check;;
         98) run_all_checks;;
-        99) health_memory; health_disk; health_ports; echo -e "Press enter to return..."; read -r;;
+        99) health_memory; health_disk; health_ports;;
         0) exit 0;;
         *) echo "Invalid choice."; sleep 1;;
     esac
