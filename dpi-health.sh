@@ -184,8 +184,8 @@ health_apt() {
     echo -e "\n============================="
     echo -e "${bold}[APT UPDATES]${reset}"
     echo "============================="
-    (apt update) & spinner
-    apt list --upgradable
+    (apt update; apt list --upgradable) & spinner
+    wait
     echo -e "\n${bold}Press enter to return...${reset}"
     read -r
 }
@@ -331,98 +331,160 @@ health_crash_check() {
 health_final_report() {
     echo -ne "\n[*] Gathering final report. Please wait... "
 
-    (
-        echo "[1/10] Checking RAM usage..."
-        ram_available=$(free -h | awk '/Mem:/ {print $7}')
+    echo "[1/10] Checking RAM usage..."
+    ram_available=$(free -h | awk '/Mem:/ {print $7}')
 
-        echo "[2/10] Measuring CPU load..."
-        cpu_load=$(uptime | awk -F'load average:' '{print $2}' | cut -d',' -f1 | xargs)
-        core_count=$(nproc)
+    echo "[2/10] Measuring CPU load..."
+    cpu_load=$(uptime | awk -F'load average:' '{print $2}' | cut -d',' -f1 | xargs)
+    core_count=$(nproc)
 
-        echo "[3/10] Gathering disk usage..."
-        root_disk_usage=$(df -h / | awk 'NR==2 {print $5}')
-        root_disk_free=$(df -h / | awk 'NR==2 {print $4}')
-        mnt_total=$(du -sh /mnt 2>/dev/null | cut -f1)
+    echo "[3/10] Gathering disk usage..."
+    root_disk_usage=$(df -h / | awk 'NR==2 {print $5}')
+    root_disk_free=$(df -h / | awk 'NR==2 {print $4}')
+    mnt_total=$(du -sh /mnt 2>/dev/null | cut -f1)
 
-        echo "[4/10] Counting open ports..."
-        open_ports=$(ss -tuln | awk '{print $5}' | grep -Eo '[0-9]+$' | wc -l)
+    echo "[4/10] Counting open ports..."
+    open_ports=$(ss -tuln | awk '{print $5}' | grep -Eo '[0-9]+$' | wc -l)
 
-        echo "[5/10] Checking failed services..."
-        failed_services=$(systemctl --failed | grep -v "0 loaded units" | grep -c "loaded")
+    echo "[5/10] Checking failed services..."
+    failed_services=$(systemctl --failed | grep -v "0 loaded units" | grep -c "loaded")
 
-        echo "[6/10] Measuring DNS response time..."
-        dns_time=$(timeout 5 dig @127.0.0.1 -p 5335 www.google.com 2>/dev/null | grep "Query time" | awk '{print $4}')
-        if [[ -z "$dns_time" ]]; then
-            dns_time=$(timeout 5 dig @127.0.0.1 www.google.com 2>/dev/null | grep "Query time" | awk '{print $4}')
-        fi
-        [[ -z "$dns_time" ]] && dns_time="⚠️ DNS unreachable or timed out"
+    echo "[6/10] Measuring DNS response time..."
+    dns_time=$(timeout 5 dig @127.0.0.1 -p 5335 www.google.com 2>/dev/null | grep "Query time" | awk '{print $4}')
+    if [[ -z "$dns_time" ]]; then
+        dns_time=$(timeout 5 dig @127.0.0.1 www.google.com 2>/dev/null | grep "Query time" | awk '{print $4}')
+    fi
+    [[ -z "$dns_time" ]] && dns_time="⚠️ DNS unreachable or timed out"
 
-        echo "[7/10] Checking sudo users..."
-        sudo_users=$(getent group sudo | cut -d: -f4)
-        has_sudo_user="⚠️ No sudo users detected"
-        [[ -n "$sudo_users" ]] && has_sudo_user="✅ Sudo users present"
+    echo "[7/10] Checking sudo users..."
+    sudo_users=$(getent group sudo | cut -d: -f4)
+    has_sudo_user="⚠️ No sudo users detected"
+    [[ -n "$sudo_users" ]] && has_sudo_user="✅ Sudo users present"
 
-        echo "[8/10] Checking Docker containers..."
-        docker_status="✅ Containers running (check manually for details)"
+    echo "[8/10] Checking Docker containers..."
+    docker_status="✅ Containers running (check manually for details)"
 
-        echo "[9/10] Checking for zombie processes..."
-        zombies=$(ps aux | awk '$8 == "Z"')
-        [[ -z "$zombies" ]] && zombie_status="✅ No zombie processes" || zombie_status="⚠️ Zombie processes detected"
+    echo "[9/10] Checking for zombie processes..."
+    zombies=$(ps aux | awk '$8 == "Z"')
+    [[ -z "$zombies" ]] && zombie_status="✅ No zombie processes" || zombie_status="⚠️ Zombie processes detected"
 
-        echo "[10/10] Checking APT updates..."
-        upgradable=$(apt list --upgradable 2>/dev/null | grep -vc "Listing")
+    echo "[10/10] Checking APT updates..."
+    upgradable=$(apt list --upgradable 2>/dev/null | grep -vc "Listing")
 
-        # Remove spinner line
-        printf "\r%*s\r" 30 " "
+    # Remove spinner line
+    printf "\r%*s\r" 30 " "
 
-        echo -e "\n============================="
-        echo -e "${bold}[SYSTEM HEALTH SUMMARY]${reset}"
-        echo "============================="
+    echo -e "\n============================="
+    echo -e "${bold}[SYSTEM HEALTH SUMMARY]${reset}"
+    echo "============================="
 
-        echo -e "\n\U1F4CA ${bold}CPU & RAM:${reset}"
-        echo -e "✅ RAM available: ${ram_available}"
-        echo -e "✅ Average CPU load: ${cpu_load} (cores: ${core_count})"
+    echo -e "\n\U1F4CA ${bold}CPU & RAM:${reset}"
+    echo -e "✅ RAM available: ${ram_available}"
+    echo -e "✅ Average CPU load: ${cpu_load} (cores: ${core_count})"
 
-        echo -e "\n\U1F4BE ${bold}Storage:${reset}"
-        echo -e "✅ Root disk usage: ${root_disk_usage} (${root_disk_free} free)"
-        echo -e "📁 /mnt usage total: ${mnt_total}"
+    echo -e "\n\U1F4BE ${bold}Storage:${reset}"
+    echo -e "✅ Root disk usage: ${root_disk_usage} (${root_disk_free} free)"
+    echo -e "📁 /mnt usage total: ${mnt_total}"
 
-        echo -e "\n\U1F310 ${bold}Network:${reset}"
-        echo -e "✅ Internet connection OK (ping successful)"
-        echo -e "⚠️ Open ports: ${open_ports} detected"
+    echo -e "\n\U1F310 ${bold}Network:${reset}"
+    echo -e "✅ Internet connection OK (ping successful)"
+    echo -e "⚠️ Open ports: ${open_ports} detected"
 
-        echo -e "\n\U1F6E0️ ${bold}System Services & Logging:${reset}"
-        [[ "$failed_services" -gt 0 ]] && echo -e "⚠️ ${failed_services} failed service(s) detected" || echo -e "✅ No failed services"
-        echo -e "✅ Unbound DNS response: ${dns_time} ms"
-        if systemctl is-enabled bootlog-backup.service &>/dev/null; then
-            echo -e "✅ Bootlog backup: enabled"
-            recent_log=$(find /mnt -type f -name "dmesg.log" -mmin -120 2>/dev/null | head -n 1)
-            if [[ -n "$recent_log" ]]; then
-                echo -e "📁 Recent bootlog saved: ${recent_log%/*}"
-            else
-                echo -e "⚠️ No recent logs found in the last 2 hours (check storage path or service)"
-            fi
+    echo -e "\n\U1F6E0️ ${bold}System Services & Logging:${reset}"
+    [[ "$failed_services" -gt 0 ]] && echo -e "⚠️ ${failed_services} failed service(s) detected" || echo -e "✅ No failed services"
+    echo -e "✅ Unbound DNS response: ${dns_time} ms"
+    if systemctl is-enabled bootlog-backup.service &>/dev/null; then
+        echo -e "✅ Bootlog backup: enabled"
+        recent_log=$(find /mnt -type f -name "dmesg.log" -mmin -120 2>/dev/null | head -n 1)
+        if [[ -n "$recent_log" ]]; then
+            echo -e "📁 Recent bootlog saved: ${recent_log%/*}"
         else
-            echo -e "ℹ️ Bootlog backup not installed (Advanced → 9 or 10)"
+            echo -e "⚠️ No recent logs found in the last 2 hours (check storage path or service)"
         fi
+    else
+        echo -e "ℹ️ Bootlog backup not installed (Advanced → 9 or 10)"
+    fi
 
-        echo -e "\n\U1F433 ${bold}Docker:${reset}"
-        echo -e "$docker_status"
+    echo -e "\n\U1F433 ${bold}Docker:${reset}"
+    echo -e "$docker_status"
 
-        echo -e "\n\U1F512 ${bold}Security:${reset}"
-        echo -e "$has_sudo_user"
-        echo -e "$zombie_status"
+    echo -e "\n\U1F512 ${bold}Security:${reset}"
+    echo -e "$has_sudo_user"
+    echo -e "$zombie_status"
 
-        echo -e "\n\U1F4E6 ${bold}Package Management:${reset}"
-        [[ "$upgradable" -gt 0 ]] && echo -e "🔄 ${upgradable} update(s) available" || echo -e "✅ All up-to-date"
+    echo -e "\n\U1F4E6 ${bold}Package Management:${reset}"
+    [[ "$upgradable" -gt 0 ]] && echo -e "🔄 ${upgradable} update(s) available" || echo -e "✅ All up-to-date"
 
-        echo -e "\n\U1F4CB ${bold}Recommendations:${reset}"
-        [[ -z "$sudo_users" ]] && echo -e "- Add at least one user to sudo"
-        [[ "$failed_services" -gt 0 ]] && echo -e "- Check status of failed services"
-        [[ "$open_ports" -gt 15 ]] && echo -e "- Consider limiting ports with firewall (e.g. ufw)"
-        echo -e "\n${bold}Press enter to return...${reset}"
-        read -r
-    ) & spinner
+    echo -e "\n\U1F4CB ${bold}Recommendations:${reset}"
+    [[ -z "$sudo_users" ]] && echo -e "- Add at least one user to sudo"
+    [[ "$failed_services" -gt 0 ]] && echo -e "- Check status of failed services"
+    [[ "$open_ports" -gt 15 ]] && echo -e "- Consider limiting ports with firewall (e.g. ufw)"
+    echo -e "\n${bold}Press enter to return...${reset}"
+    read -r
+}
+
+# === Bootlog Backup Installer ===
+install_bootlog_backup() {
+    echo -e "\n============================="
+    echo -e "${bold}[BOOTLOG BACKUP INSTALLER]${reset}"
+    echo "============================="
+
+    read -r -p "Where should boot logs be stored? (default: /mnt/bootlog-backups): " custom_path
+    target_dir="${custom_path:-/mnt/bootlog-backups}"
+
+    if mount | grep -q "on $target_dir "; then
+        echo "✅ Destination '$target_dir' is mounted."
+    elif mount | grep "$target_dir" >/dev/null 2>&1; then
+        echo "✅ '$target_dir' appears usable."
+    else
+        echo "⚠️ Warning: '$target_dir' is not a mounted external location."
+        read -r -p "Continue anyway? (y/N): " cont
+        [[ ! "$cont" =~ ^[Yy]$ ]] && echo "Aborting." && return
+    fi
+
+    script_path="/usr/local/bin/bootlog-backup.sh"
+    service_path="/etc/systemd/system/bootlog-backup.service"
+
+    echo -e "\nCreating log backup script at $script_path..."
+    cat <<EOF | sudo tee "$script_path" >/dev/null
+#!/bin/bash
+LOGDIR="$target_dir/\$(date +%F_%H-%M)"
+mkdir -p "\$LOGDIR"
+if ! mount | grep -q "$target_dir"; then
+    echo "Backup skipped: $target_dir not mounted" > /tmp/bootlog-failed.txt
+    exit 1
+fi
+dmesg > "\$LOGDIR/dmesg.log"
+journalctl -b -1 > "\$LOGDIR/journal_previous_boot.log" 2>&1
+uptime > "\$LOGDIR/uptime.txt"
+who -a > "\$LOGDIR/who.txt"
+EOF
+
+    chmod +x "$script_path"
+
+    echo -e "\nCreating systemd unit at $service_path..."
+    cat <<EOF | sudo tee "$service_path" >/dev/null
+[Unit]
+Description=Backup boot logs to persistent storage
+After=local-fs.target network.target
+
+[Service]
+ExecStart=$script_path
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    echo -e "\nEnabling bootlog-backup service..."
+    sudo systemctl daemon-reexec
+    sudo systemctl daemon-reload
+    sudo systemctl enable bootlog-backup.service
+
+    echo -e "\n✅ Bootlog backup service installed successfully!"
+    echo "Logs will be saved to: $target_dir/YYYY-MM-DD_HH-MM/"
+    echo -e "\n${bold}Press enter to return...${reset}"
+    read -r
 }
 
 # === Advanced submenu ===
@@ -623,7 +685,7 @@ while true; do
         14) health_cron;;
         15) health_users;;
         16) advanced_menu;;
-        96) (health_final_report) & spinner; echo -e "\n${bold}Press enter to return...${reset}"; read -r;;
+        96) health_final_report; echo -e "\n${bold}Press enter to return...${reset}"; read -r;;
         97) health_crash_check;;
         98)
             echo -e "\n${bold}Run all checks at once or step-by-step?${reset}"
@@ -641,67 +703,3 @@ while true; do
         *) echo "Invalid choice."; sleep 1;;
     esac
 done
-
-# === Bootlog Backup Installer ===
-install_bootlog_backup() {
-    echo -e "\n============================="
-    echo -e "${bold}[BOOTLOG BACKUP INSTALLER]${reset}"
-    echo "============================="
-
-    read -r -p "Where should boot logs be stored? (default: /mnt/bootlog-backups): " custom_path
-    target_dir="${custom_path:-/mnt/bootlog-backups}"
-
-    if mount | grep -q "on $target_dir "; then
-        echo "✅ Destination '$target_dir' is mounted."
-    elif mount | grep "$target_dir" >/dev/null 2>&1; then
-        echo "✅ '$target_dir' appears usable."
-    else
-        echo "⚠️ Warning: '$target_dir' is not a mounted external location."
-        read -r -p "Continue anyway? (y/N): " cont
-        [[ ! "$cont" =~ ^[Yy]$ ]] && echo "Aborting." && return
-    fi
-
-    script_path="/usr/local/bin/bootlog-backup.sh"
-    service_path="/etc/systemd/system/bootlog-backup.service"
-
-    echo -e "\nCreating log backup script at $script_path..."
-    cat <<EOF | sudo tee "$script_path" >/dev/null
-#!/bin/bash
-LOGDIR="$target_dir/\$(date +%F_%H-%M)"
-mkdir -p "\$LOGDIR"
-if ! mount | grep -q "$target_dir"; then
-    echo "Backup skipped: $target_dir not mounted" > /tmp/bootlog-failed.txt
-    exit 1
-fi
-dmesg > "\$LOGDIR/dmesg.log"
-journalctl -b -1 > "\$LOGDIR/journal_previous_boot.log" 2>&1
-uptime > "\$LOGDIR/uptime.txt"
-who -a > "\$LOGDIR/who.txt"
-EOF
-
-    chmod +x "$script_path"
-
-    echo -e "\nCreating systemd unit at $service_path..."
-    cat <<EOF | sudo tee "$service_path" >/dev/null
-[Unit]
-Description=Backup boot logs to persistent storage
-After=local-fs.target network.target
-
-[Service]
-ExecStart=$script_path
-Type=oneshot
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-    echo -e "\nEnabling bootlog-backup service..."
-    sudo systemctl daemon-reexec
-    sudo systemctl daemon-reload
-    sudo systemctl enable bootlog-backup.service
-
-    echo -e "\n✅ Bootlog backup service installed successfully!"
-    echo "Logs will be saved to: $target_dir/YYYY-MM-DD_HH-MM/"
-    echo -e "\n${bold}Press enter to return...${reset}"
-    read -r
-}
