@@ -1,8 +1,24 @@
+
 #!/bin/bash
+
+# === Exit trap to restore terminal on crash or Ctrl+C ===
+trap 'tput cnorm; stty echo; exit' INT TERM
+
+# === Root check ===
+if [[ "$EUID" -ne 0 ]]; then
+    echo "⚠️ Please run this script as root for full diagnostics."
+fi
+
 
 ###############################################
 #        DietPi Deluxe Terminal Health        #
 ###############################################
+
+
+# === Version (update manually when releasing) ===
+# NOTE: Update this version string manually when releasing new versions.
+script_version="v1.0.0"
+
 
 # === Styling ===
 bold="\e[1m"
@@ -492,17 +508,19 @@ advanced_menu() {
     while true; do
         clear
         echo -e "${bold}==== Advanced Health Checks ====${reset}"
-        echo "1. Crash & Throttle Check"
-        echo "2. Zombie Processes"
-        echo "3. Docker Containers"
-        echo "4. Root SSH Login Check"
-        echo "5. Unbound DNS Response Time"
-        echo "6. Journal Persistence Check"
-        echo "7. EXT4 Filesystem Recovery Check"
-        echo "8. MMC0/SD Boot Error Check"
-        echo "9. Bootlog Backup Info (safe persistent crash logs)"
+        echo " 1. Crash & Throttle Check"
+        echo " 2. Zombie Processes"
+        echo " 3. Docker Containers"
+        echo " 4. Root SSH Login Check"
+        echo " 5. Unbound DNS Response Time"
+        echo " 6. Journal Persistence Check"
+        echo " 7. EXT4 Filesystem Recovery Check"
+        echo " 8. MMC0/SD Boot Error Check"
+        echo " 9. Bootlog Backup Info (safe persistent crash logs)"
         echo "10. Install Bootlog Backup Service"
-        echo "0. Back"
+        echo "11. Uninstall Bootlog Backup Service"
+        echo "12. Run Bootlog Backup Now"
+        echo " 0. Back"
         echo "------------------------------"
         read -r -rp "Select an option: " adv
         case $adv in
@@ -516,6 +534,8 @@ advanced_menu() {
             8) check_mmc0_errors;;
             9) health_bootlog_backup_info;;
             10) install_bootlog_backup;;
+            11) uninstall_bootlog_backup;;
+            12) sudo /usr/local/bin/bootlog-backup.sh; echo -e "\n${bold}Press enter to return...${reset}"; read -r;;
             0) return;;
             *) echo "Invalid choice"; sleep 1;;
         esac
@@ -635,6 +655,73 @@ run_all_checks() {
         echo -e "\n${bold}Press enter to return...${reset}"
         read -r
     ) & spinner
+}
+
+# === CLI Flags ===
+# --summary            Show final health report and exit
+# --check-update       Compare local and remote version
+# --install-bootlog    Run the bootlog backup installer
+# --uninstall-bootlog  Remove the bootlog backup service and script
+#
+# === CLI: run summary report only ===
+if [[ "$1" == "--summary" ]]; then
+    health_final_report
+    exit 0
+fi
+
+# === Optional update checker ===
+if [[ "$1" == "--check-update" ]]; then
+    remote_version=$(curl -s https://raw.githubusercontent.com/olivrvhk/dpi-health/main/dpi-health.sh | grep '^script_version=' | head -n1 | cut -d'"' -f2)
+    echo "Current version: $script_version"
+    echo "Remote version:  $remote_version"
+    if [[ "$remote_version" != "$script_version" ]]; then
+        echo "🔄 Update available!"
+    else
+        echo "✅ You are up to date."
+    fi
+    exit 0
+fi
+
+# === CLI: install bootlog backup directly ===
+if [[ "$1" == "--install-bootlog" ]]; then
+    install_bootlog_backup
+    exit 0
+fi
+
+# === CLI: uninstall bootlog backup directly ===
+if [[ "$1" == "--uninstall-bootlog" ]]; then
+    uninstall_bootlog_backup
+    exit 0
+fi
+
+
+# === Uninstall Bootlog Backup Function ===
+uninstall_bootlog_backup() {
+    echo -e "\n============================="
+    echo -e "${bold}[UNINSTALL BOOTLOG BACKUP]${reset}"
+    echo "============================="
+
+    service_path="/etc/systemd/system/bootlog-backup.service"
+    script_path="/usr/local/bin/bootlog-backup.sh"
+
+    if systemctl is-enabled bootlog-backup.service &>/dev/null; then
+        echo "Disabling service..."
+        systemctl disable bootlog-backup.service
+    fi
+
+    echo "Removing systemd unit..."
+    rm -f "$service_path"
+
+    echo "Removing script..."
+    rm -f "$script_path"
+
+    echo "Reloading systemd daemon..."
+    systemctl daemon-reexec
+    systemctl daemon-reload
+
+    echo -e "\n✅ Bootlog backup service uninstalled."
+    echo -e "${bold}Press enter to return...${reset}"
+    read -r
 }
 
 # === Menu ===
