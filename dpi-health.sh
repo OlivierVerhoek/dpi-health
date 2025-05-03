@@ -728,26 +728,44 @@ uninstall_bootlog_backup() {
 while true; do
     clear
     echo -e "${bold}==== DietPi Health Menu =====${reset}"
-    echo "=== SYSTEM ==="
+    echo "=== SYSTEM MONITORING ==="
     echo "1. Top Memory Usage"
     echo "2. Disk Usage"
     echo "3. I/O Stats"
     echo "4. Top CPU Processes"
     echo "5. Failed Services"
     echo "6. Kernel Messages"
-    echo "=== NETWORK ==="
+
+    echo "--- Networking Tools ---"
     echo "7. Network Check"
     echo "8. Network RX/TX Stats"
     echo "9. Listening Ports Summary"
     echo "10. Network Speed Test"
-    echo "=== MAINTENANCE ==="
+
+    echo "--- System Maintenance ---"
     echo "11. APT Updates"
     echo "12. Fix Broken Packages"
     echo "13. Largest Directories in /mnt (deep scan) [TAKES LONG]"
     echo "14. Cron Jobs Overview"
     echo "15. Users & Sudo"
-    echo "=== ADVANCED ==="
-    echo "16. Open Advanced Menu"
+
+    echo "=== ADVANCED CHECKS ==="
+    echo "16. Crash & Throttle Check"
+    echo "17. Zombie Processes"
+    echo "18. Docker Containers"
+    echo "19. Root SSH Login Check"
+    echo "20. Unbound DNS Response Time"
+    echo "21. Journal Persistence Check"
+    echo "22. EXT4 Filesystem Recovery Check"
+    echo "23. MMC0/SD Boot Error Check"
+
+    echo "--- Bootlog Tools ---"
+    echo "24. Bootlog Backup Info (safe persistent crash logs)"
+    echo "25. Install Bootlog Backup Service"
+    echo "26. Uninstall Bootlog Backup Service"
+    echo "27. Run Bootlog Backup Now"
+
+    echo "=== BUNDLED HEALTH MODES ==="
     echo "96. Show summary only (quick health overview)"
     echo "97. Quick Crash Check"
     echo "98. Run full health check + optional summary"
@@ -771,7 +789,18 @@ while true; do
         13) health_mnt_dirs;;
         14) health_cron;;
         15) health_users;;
-        16) advanced_menu;;
+        16) health_crash_check;;
+        17) health_zombies;;
+        18) health_docker;;
+        19) health_root_ssh;;
+        20) health_unbound_dns;;
+        21) check_journal_persistence;;
+        22) check_filesystem_recovery;;
+        23) check_mmc0_errors;;
+        24) health_bootlog_backup_info;;
+        25) install_bootlog_backup;;
+        26) uninstall_bootlog_backup;;
+        27) sudo /usr/local/bin/bootlog-backup.sh; echo -e "\n${bold}Press enter to return...${reset}"; read -r;;
         96) health_final_report; echo -e "\n${bold}Press enter to return...${reset}"; read -r;;
         97) health_crash_check;;
         98)
