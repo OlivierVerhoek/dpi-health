@@ -547,48 +547,14 @@ health_bootlog_backup_info() {
     echo -e "\n============================="
     echo -e "${bold}[BOOTLOG BACKUP SETUP INFO]${reset}"
     echo "============================="
-    echo "This option helps you automatically preserve system logs after each boot"
-    echo "without enabling full logging (which can wear SSDs)."
+    echo "This toolset gives you a safe, SSD-friendly way to preserve logs for debugging crashes."
+    echo "Normally, DietPi erases logs on reboot to protect your SD card or SSD lifespan."
     echo
-    echo "To enable it, run:"
-    echo -e "  ${bold}sudo nano /usr/local/bin/bootlog-backup.sh${reset}"
-    echo "Paste in:"
-    echo '  #!/bin/bash'
-    echo '  LOGDIR="/mnt/LaCie10/bootlogs/$(date +%F_%H-%M)"'
-    echo '  mkdir -p "$LOGDIR"'
-    echo '  if ! mount | grep -q "/mnt/LaCie10"; then'
-    echo '      echo "Backup skipped: /mnt/LaCie10 not mounted" > /tmp/bootlog-failed.txt'
-    echo '      exit 1'
-    echo '  fi'
-    echo '  dmesg > "$LOGDIR/dmesg.log"'
-    echo '  journalctl -b -1 > "$LOGDIR/journal_previous_boot.log" 2>&1'
-    echo '  uptime > "$LOGDIR/uptime.txt"'
-    echo '  who -a > "$LOGDIR/who.txt"'
+    echo "Bootlog Backup stores only key crash-related logs after each boot —"
+    echo "without enabling full persistent logging (which wears out disks faster)."
     echo
-    echo "Then make it executable:"
-    echo "  ${bold}sudo chmod +x /usr/local/bin/bootlog-backup.sh${reset}"
+    echo "It's ideal for troubleshooting unexpected reboots, crashes, or power failures."
     echo
-    echo "Now create the systemd service:"
-    echo "  ${bold}sudo nano /etc/systemd/system/bootlog-backup.service${reset}"
-    echo "Paste in:"
-    echo '[Unit]'
-    echo 'Description=Backup boot logs to persistent storage'
-    echo 'After=local-fs.target network.target'
-    echo
-    echo '[Service]'
-    echo 'ExecStart=/usr/local/bin/bootlog-backup.sh'
-    echo 'Type=oneshot'
-    echo
-    echo '[Install]'
-    echo 'WantedBy=multi-user.target'
-    echo
-    echo "Then enable it:"
-    echo "  ${bold}sudo systemctl daemon-reexec${reset}"
-    echo "  ${bold}sudo systemctl daemon-reload${reset}"
-    echo "  ${bold}sudo systemctl enable bootlog-backup.service${reset}"
-    echo
-    echo "✅ Boot logs will now be saved after every boot to:"
-    echo "  /mnt/LaCie10/bootlogs/YYYY-MM-DD_HH-MM/"
     echo -e "\n${bold}Press enter to return...${reset}"
     read -r
 }
@@ -728,49 +694,51 @@ uninstall_bootlog_backup() {
 while true; do
     clear
     echo -e "${bold}==== DietPi Health Menu =====${reset}"
-    echo "=== SYSTEM MONITORING ==="
-    echo "1. Top Memory Usage"
-    echo "2. Disk Usage"
-    echo "3. I/O Stats"
-    echo "4. Top CPU Processes"
-    echo "5. Failed Services"
-    echo "6. Kernel Messages"
 
-    echo "--- Networking Tools ---"
-    echo "7. Network Check"
-    echo "8. Network RX/TX Stats"
-    echo "9. Listening Ports Summary"
-    echo "10. Network Speed Test"
+    echo -e "\n=== SYSTEM MONITORING ==="
+    echo "  1.  Top Memory Usage"
+    echo "  2.  Disk Usage"
+    echo "  3.  I/O Stats"
+    echo "  4.  Top CPU Processes"
+    echo "  5.  Failed Services"
+    echo "  6.  Kernel Messages"
 
-    echo "--- System Maintenance ---"
-    echo "11. APT Updates"
-    echo "12. Fix Broken Packages"
-    echo "13. Largest Directories in /mnt (deep scan) [TAKES LONG]"
-    echo "14. Cron Jobs Overview"
-    echo "15. Users & Sudo"
+    echo -e "\n--- Networking Tools ---"
+    echo "  7.  Network Check"
+    echo "  8.  Network RX/TX Stats"
+    echo "  9.  Listening Ports Summary"
+    echo " 10.  Network Speed Test"
 
-    echo "=== ADVANCED CHECKS ==="
-    echo "16. Crash & Throttle Check"
-    echo "17. Zombie Processes"
-    echo "18. Docker Containers"
-    echo "19. Root SSH Login Check"
-    echo "20. Unbound DNS Response Time"
-    echo "21. Journal Persistence Check"
-    echo "22. EXT4 Filesystem Recovery Check"
-    echo "23. MMC0/SD Boot Error Check"
+    echo -e "\n--- System Maintenance ---"
+    echo " 11.  APT Updates"
+    echo " 12.  Fix Broken Packages"
+    echo " 13.  Largest Directories in /mnt [TAKES LONG]"
+    echo " 14.  Cron Jobs Overview"
+    echo " 15.  Users & Sudo"
 
-    echo "--- Bootlog Tools ---"
-    echo "24. Bootlog Backup Info (safe persistent crash logs)"
-    echo "25. Install Bootlog Backup Service"
-    echo "26. Uninstall Bootlog Backup Service"
-    echo "27. Run Bootlog Backup Now"
+    echo -e "\n=== ADVANCED CHECKS ==="
+    echo " 16.  Crash & Throttle Check"
+    echo " 17.  Zombie Processes"
+    echo " 18.  Docker Containers"
+    echo " 19.  Root SSH Login Check"
+    echo " 20.  Unbound DNS Response Time"
+    echo " 21.  Journal Persistence Check"
+    echo " 22.  EXT4 Filesystem Recovery Check"
+    echo " 23.  MMC0/SD Boot Error Check"
 
-    echo "=== BUNDLED HEALTH MODES ==="
-    echo "96. Show summary only (quick health overview)"
-    echo "97. Quick Crash Check"
-    echo "98. Run full health check + optional summary"
-    echo "99. Quick peek: memory, disk, ports"
-    echo "0. Exit"
+    echo -e "\n--- Bootlog Tools ---"
+    echo " 24.  Bootlog Backup Info             · why this protects logs safely"
+    echo " 25.  Install Bootlog Backup Service  · auto boot logging"
+    echo " 26.  Uninstall Bootlog Backup Service· remove service"
+    echo " 27.  Run Bootlog Backup Now          · manual snapshot"
+
+    echo -e "\n=== BUNDLED HEALTH MODES ==="
+    echo " 96.  Show summary only (quick health overview)"
+    echo " 97.  Quick Crash Check"
+    echo " 98.  Run full health check + optional summary"
+    echo " 99.  Quick peek: memory, disk, ports"
+
+    echo "  0.  Exit"
     echo "------------------------------"
     read -r -rp "Select an option: " opt
     case $opt in
