@@ -38,6 +38,39 @@ require_tool() {
     return 0
 }
 
+check_journal_persistence() {
+    echo -e "\n============================="
+    echo -e "${bold}[JOURNAL PERSISTENCE CHECK]${reset}"
+    echo "============================="
+    journal_dir="/var/log/journal"
+    if [ -d "$journal_dir" ] && [ "$(ls -A $journal_dir 2>/dev/null)" ]; then
+        echo "✅ Persistent journal is ENABLED"
+    else
+        echo "⚠️ Persistent journal is DISABLED — logs will be lost after reboot!"
+        echo "  ➤ Run 'dietpi-software' and change Log System to 'Full' to fix."
+    fi
+    echo -e "\n${bold}Press enter to return...${reset}"
+    read -r
+}
+
+check_filesystem_recovery() {
+    echo -e "\n============================="
+    echo -e "${bold}[FILESYSTEM RECOVERY CHECK]${reset}"
+    echo "============================="
+    dmesg | grep -i "EXT4-fs" | grep -i "recovery"
+    echo -e "\n${bold}Press enter to return...${reset}"
+    read -r
+}
+
+check_mmc0_errors() {
+    echo -e "\n============================="
+    echo -e "${bold}[MMC0/SD CARD ERROR CHECK]${reset}"
+    echo "============================="
+    dmesg | grep -i mmc0 | grep -i fail
+    echo -e "\n${bold}Press enter to return...${reset}"
+    read -r
+}
+
 # === Health Functions ===
 health_memory() {
     echo -e "\n============================="
@@ -285,7 +318,8 @@ health_crash_check() {
     echo -e "\nChecking for OOM kills..."
     oom_output=$(journalctl -k 2>&1 | tee /tmp/journal_check.log | grep -i "killed process")
     if grep -qi "truncated" /tmp/journal_check.log; then
-        echo "⚠️ Warning: system journal appears truncated or incomplete. Consider enabling persistent logging."
+        echo "⚠️ Warning: system journal appears truncated."
+        echo "  ➤ Logs from before reboot are likely missing."
     fi
     echo "$oom_output"
     [[ -z "$oom_output" ]] && echo "No OOM kills found"
@@ -360,6 +394,17 @@ health_final_report() {
         echo -e "\n\U1F6E0️ ${bold}System Services & Logging:${reset}"
         [[ "$failed_services" -gt 0 ]] && echo -e "⚠️ ${failed_services} failed service(s) detected" || echo -e "✅ No failed services"
         echo -e "✅ Unbound DNS response: ${dns_time} ms"
+        if systemctl is-enabled bootlog-backup.service &>/dev/null; then
+            echo -e "✅ Bootlog backup: enabled"
+            recent_log=$(find /mnt -type f -name "dmesg.log" -mmin -120 2>/dev/null | head -n 1)
+            if [[ -n "$recent_log" ]]; then
+                echo -e "📁 Recent bootlog saved: ${recent_log%/*}"
+            else
+                echo -e "⚠️ No recent logs found in the last 2 hours (check storage path or service)"
+            fi
+        else
+            echo -e "ℹ️ Bootlog backup not installed (Advanced → 9 or 10)"
+        fi
 
         echo -e "\n\U1F433 ${bold}Docker:${reset}"
         echo -e "$docker_status"
@@ -390,6 +435,11 @@ advanced_menu() {
         echo "3. Docker Containers"
         echo "4. Root SSH Login Check"
         echo "5. Unbound DNS Response Time"
+        echo "6. Journal Persistence Check"
+        echo "7. EXT4 Filesystem Recovery Check"
+        echo "8. MMC0/SD Boot Error Check"
+        echo "9. Bootlog Backup Info (safe persistent crash logs)"
+        echo "10. Install Bootlog Backup Service"
         echo "0. Back"
         echo "------------------------------"
         read -r -rp "Select an option: " adv
@@ -399,10 +449,66 @@ advanced_menu() {
             3) health_docker;;
             4) health_root_ssh;;
             5) health_unbound_dns;;
+            6) check_journal_persistence;;
+            7) check_filesystem_recovery;;
+            8) check_mmc0_errors;;
+            9) health_bootlog_backup_info;;
+            10) install_bootlog_backup;;
             0) return;;
             *) echo "Invalid choice"; sleep 1;;
         esac
     done
+}
+
+# === Bootlog Backup Info ===
+health_bootlog_backup_info() {
+    echo -e "\n============================="
+    echo -e "${bold}[BOOTLOG BACKUP SETUP INFO]${reset}"
+    echo "============================="
+    echo "This option helps you automatically preserve system logs after each boot"
+    echo "without enabling full logging (which can wear SSDs)."
+    echo
+    echo "To enable it, run:"
+    echo -e "  ${bold}sudo nano /usr/local/bin/bootlog-backup.sh${reset}"
+    echo "Paste in:"
+    echo '  #!/bin/bash'
+    echo '  LOGDIR="/mnt/LaCie10/bootlogs/$(date +%F_%H-%M)"'
+    echo '  mkdir -p "$LOGDIR"'
+    echo '  if ! mount | grep -q "/mnt/LaCie10"; then'
+    echo '      echo "Backup skipped: /mnt/LaCie10 not mounted" > /tmp/bootlog-failed.txt'
+    echo '      exit 1'
+    echo '  fi'
+    echo '  dmesg > "$LOGDIR/dmesg.log"'
+    echo '  journalctl -b -1 > "$LOGDIR/journal_previous_boot.log" 2>&1'
+    echo '  uptime > "$LOGDIR/uptime.txt"'
+    echo '  who -a > "$LOGDIR/who.txt"'
+    echo
+    echo "Then make it executable:"
+    echo "  ${bold}sudo chmod +x /usr/local/bin/bootlog-backup.sh${reset}"
+    echo
+    echo "Now create the systemd service:"
+    echo "  ${bold}sudo nano /etc/systemd/system/bootlog-backup.service${reset}"
+    echo "Paste in:"
+    echo '[Unit]'
+    echo 'Description=Backup boot logs to persistent storage'
+    echo 'After=local-fs.target network.target'
+    echo
+    echo '[Service]'
+    echo 'ExecStart=/usr/local/bin/bootlog-backup.sh'
+    echo 'Type=oneshot'
+    echo
+    echo '[Install]'
+    echo 'WantedBy=multi-user.target'
+    echo
+    echo "Then enable it:"
+    echo "  ${bold}sudo systemctl daemon-reexec${reset}"
+    echo "  ${bold}sudo systemctl daemon-reload${reset}"
+    echo "  ${bold}sudo systemctl enable bootlog-backup.service${reset}"
+    echo
+    echo "✅ Boot logs will now be saved after every boot to:"
+    echo "  /mnt/LaCie10/bootlogs/YYYY-MM-DD_HH-MM/"
+    echo -e "\n${bold}Press enter to return...${reset}"
+    read -r
 }
 
 # === Interactive full health check ===
@@ -535,3 +641,67 @@ while true; do
         *) echo "Invalid choice."; sleep 1;;
     esac
 done
+
+# === Bootlog Backup Installer ===
+install_bootlog_backup() {
+    echo -e "\n============================="
+    echo -e "${bold}[BOOTLOG BACKUP INSTALLER]${reset}"
+    echo "============================="
+
+    read -r -p "Where should boot logs be stored? (default: /mnt/bootlog-backups): " custom_path
+    target_dir="${custom_path:-/mnt/bootlog-backups}"
+
+    if mount | grep -q "on $target_dir "; then
+        echo "✅ Destination '$target_dir' is mounted."
+    elif mount | grep "$target_dir" >/dev/null 2>&1; then
+        echo "✅ '$target_dir' appears usable."
+    else
+        echo "⚠️ Warning: '$target_dir' is not a mounted external location."
+        read -r -p "Continue anyway? (y/N): " cont
+        [[ ! "$cont" =~ ^[Yy]$ ]] && echo "Aborting." && return
+    fi
+
+    script_path="/usr/local/bin/bootlog-backup.sh"
+    service_path="/etc/systemd/system/bootlog-backup.service"
+
+    echo -e "\nCreating log backup script at $script_path..."
+    cat <<EOF | sudo tee "$script_path" >/dev/null
+#!/bin/bash
+LOGDIR="$target_dir/\$(date +%F_%H-%M)"
+mkdir -p "\$LOGDIR"
+if ! mount | grep -q "$target_dir"; then
+    echo "Backup skipped: $target_dir not mounted" > /tmp/bootlog-failed.txt
+    exit 1
+fi
+dmesg > "\$LOGDIR/dmesg.log"
+journalctl -b -1 > "\$LOGDIR/journal_previous_boot.log" 2>&1
+uptime > "\$LOGDIR/uptime.txt"
+who -a > "\$LOGDIR/who.txt"
+EOF
+
+    chmod +x "$script_path"
+
+    echo -e "\nCreating systemd unit at $service_path..."
+    cat <<EOF | sudo tee "$service_path" >/dev/null
+[Unit]
+Description=Backup boot logs to persistent storage
+After=local-fs.target network.target
+
+[Service]
+ExecStart=$script_path
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    echo -e "\nEnabling bootlog-backup service..."
+    sudo systemctl daemon-reexec
+    sudo systemctl daemon-reload
+    sudo systemctl enable bootlog-backup.service
+
+    echo -e "\n✅ Bootlog backup service installed successfully!"
+    echo "Logs will be saved to: $target_dir/YYYY-MM-DD_HH-MM/"
+    echo -e "\n${bold}Press enter to return...${reset}"
+    read -r
+}
