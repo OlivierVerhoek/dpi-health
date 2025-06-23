@@ -1,6 +1,9 @@
 
 #!/bin/bash
 
+# Ensure bootlog backups directory exists
+mkdir -p /var/log/bootlog-backups
+
 # === Exit trap to restore terminal on crash or Ctrl+C ===
 trap 'tput cnorm; stty echo; exit' INT TERM
 
@@ -339,6 +342,8 @@ health_crash_check() {
     fi
     echo "$oom_output"
     [[ -z "$oom_output" ]] && echo "No OOM kills found"
+    echo -e "\nChecking bootlog backups..."
+    ls -1 /var/log/bootlog-backups/bootlog-*.txt 2>/dev/null | tail -n 1 | xargs -r tail -n 20
     echo -e "\n${bold}Press enter to return...${reset}"
     read -r
 }
@@ -545,18 +550,62 @@ advanced_menu() {
 # === Bootlog Backup Info ===
 health_bootlog_backup_info() {
     echo -e "\n============================="
-    echo -e "${bold}[BOOTLOG BACKUP SETUP INFO]${reset}"
+    echo -e "${bold}[BOOTLOG BACKUP INFO]${reset}"
     echo "============================="
-    echo "This toolset gives you a safe, SSD-friendly way to preserve logs for debugging crashes."
-    echo "Normally, DietPi erases logs on reboot to protect your SD card or SSD lifespan."
-    echo
-    echo "Bootlog Backup stores only key crash-related logs after each boot —"
-    echo "without enabling full persistent logging (which wears out disks faster)."
-    echo
-    echo "It's ideal for troubleshooting unexpected reboots, crashes, or power failures."
-    echo
-    echo -e "\n${bold}Press enter to return...${reset}"
-    read -r
+    ls -lh /var/log/bootlog-backups 2>/dev/null || echo "No bootlog backups found."
+    echo -e "\nTo see logs from a backup:"
+    echo "less /var/log/bootlog-backups/bootlog-YYYYMMDD-HHMM.txt"
+}
+
+# === Install Bootlog Backup (simple version) ===
+install_bootlog_backup() {
+    echo -e "\nInstalling bootlog backup system..."
+    mkdir -p /var/log/bootlog-backups
+
+    cat << 'EOF' > /usr/local/bin/bootlog-backup.sh
+#!/bin/bash
+DATE=$(date '+%Y%m%d-%H%M')
+journalctl -b -1 > /var/log/bootlog-backups/bootlog-$DATE.txt
+EOF
+
+    chmod +x /usr/local/bin/bootlog-backup.sh
+
+    cat << 'EOF' > /etc/systemd/system/bootlog-backup.service
+[Unit]
+Description=Bootlog Backup Service
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/bootlog-backup.sh
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    systemctl daemon-reexec
+    systemctl daemon-reload
+    systemctl enable bootlog-backup.service
+
+    echo "✅ Bootlog backup installed."
+}
+
+# === Uninstall Bootlog Backup (simple version) ===
+uninstall_bootlog_backup() {
+    echo -e "\nUninstalling bootlog backup system..."
+    systemctl disable bootlog-backup.service
+    rm -f /usr/local/bin/bootlog-backup.sh
+    rm -f /etc/systemd/system/bootlog-backup.service
+    systemctl daemon-reexec
+    systemctl daemon-reload
+    echo "✅ Bootlog backup uninstalled."
+}
+
+# === Run Bootlog Backup Now ===
+run_bootlog_backup_now() {
+    echo -e "\nRunning bootlog backup manually..."
+    bash /usr/local/bin/bootlog-backup.sh
+    echo "✅ Manual bootlog backup complete."
 }
 
 # === Interactive full health check ===
@@ -726,6 +775,11 @@ while true; do
     echo " 22.  EXT4 Filesystem Recovery Check"
     echo " 23.  MMC0/SD Boot Error Check"
 
+    echo -e "${bold}=== BOOTLOG TOOLS ===${reset}"
+    echo "24. Bootlog Backup Info"
+    echo "25. Install Bootlog Backup Service"
+    echo "26. Uninstall Bootlog Backup Service"
+    echo "27. Run Bootlog Backup Now"
 
     echo -e "\n=== BUNDLED HEALTH MODES ==="
     echo " 96.  Show summary only (quick health overview)"
@@ -763,7 +817,7 @@ while true; do
         24) health_bootlog_backup_info;;
         25) install_bootlog_backup;;
         26) uninstall_bootlog_backup;;
-        27) sudo /usr/local/bin/bootlog-backup.sh; echo -e "\n${bold}Press enter to return...${reset}"; read -r;;
+        27) run_bootlog_backup_now;;
         96) health_final_report; echo -e "\n${bold}Press enter to return...${reset}"; read -r;;
         97) health_crash_check;;
         98)
