@@ -726,11 +726,6 @@ while true; do
     echo " 22.  EXT4 Filesystem Recovery Check"
     echo " 23.  MMC0/SD Boot Error Check"
 
-    echo -e "\n--- Bootlog Tools ---"
-    echo " 24.  Bootlog Backup Info             · why this protects logs safely"
-    echo " 25.  Install Bootlog Backup Service  · auto boot logging"
-    echo " 26.  Uninstall Bootlog Backup Service· remove service"
-    echo " 27.  Run Bootlog Backup Now          · manual snapshot"
 
     echo -e "\n=== BUNDLED HEALTH MODES ==="
     echo " 96.  Show summary only (quick health overview)"
